@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Конвертер файлов</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Конвертер файлов</h1>
+        
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <div class="upload-text">Перетащите файл сюда или нажмите для выбора</div>
+            <input type="file" id="fileInput" class="file-input">
+        </div>
+
+        <div class="file-info" id="fileInfo">
+            <div class="file-name" id="fileName"></div>
+        </div>
+
+        <div class="error" id="error"></div>
+
+        <div class="conversion-options" id="conversionOptions">
+            <div class="option-group">
+                <label for="targetFormat">Выберите формат для конвертации:</label>
+                <select id="targetFormat"></select>
+            </div>
+            <button class="convert-btn" id="convertBtn">Конвертировать</button>
+        </div>
+
+        <div class="progress" id="progress">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+
+        <div class="download-area" id="downloadArea">
+            <a href="#" class="download-btn" id="downloadBtn" download>Скачать конвертированный файл</a>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>
