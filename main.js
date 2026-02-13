@@ -14,7 +14,7 @@ const error = document.getElementById('error');
 let currentFile = null;
 let convertedBlob = null;
 
-// Поддерживаемые форматы
+// Supported formats
 const supportedFormats = {
     image: {
         input: ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp'],
@@ -35,10 +35,10 @@ const supportedFormats = {
     }
 };
 
-// Обработка клика по области загрузки
+// Handle click on upload area
 uploadArea.addEventListener('click', () => fileInput.click());
 
-// Обработка drag and drop
+// Handle drag and drop
 uploadArea.addEventListener('dragover', (e) => {
     e.preventDefault();
     uploadArea.classList.add('dragover');
@@ -57,7 +57,7 @@ uploadArea.addEventListener('drop', (e) => {
     }
 });
 
-// Обработка выбора файла
+// Handle file selection
 fileInput.addEventListener('change', (e) => {
     if (e.target.files.length > 0) {
         handleFile(e.target.files[0]);
@@ -67,24 +67,24 @@ fileInput.addEventListener('change', (e) => {
 function handleFile(file) {
     error.classList.remove('active');
     currentFile = file;
-    fileName.textContent = `Файл: ${file.name} (${formatFileSize(file.size)})`;
+    fileName.textContent = `File: ${file.name} (${formatFileSize(file.size)})`;
     fileInfo.classList.add('active');
 
-    // Определяем тип файла
+    // Determine file type
     const fileType = getFileType(file.type);
 
     if (!fileType) {
-        showError('Неподдерживаемый тип файла. Поддерживаются изображения и текстовые файлы.');
+        showError('Unsupported file type. Images and text files are supported.');
         conversionOptions.classList.remove('active');
         return;
     }
 
-    // Заполняем опции конвертации
+    // Populate conversion options
     const formats = supportedFormats[fileType].output;
     targetFormat.innerHTML = '';
 
     formats.forEach((format) => {
-        // Не показываем текущий формат
+        // Don't show current format
         if (format.value !== file.type) {
             const option = document.createElement('option');
             option.value = format.value;
@@ -94,7 +94,7 @@ function handleFile(file) {
     });
 
     if (targetFormat.options.length === 0) {
-        showError('Нет доступных форматов для конвертации этого файла.');
+        showError('No conversion formats available for this file.');
         conversionOptions.classList.remove('active');
     } else {
         conversionOptions.classList.add('active');
@@ -158,7 +158,7 @@ convertBtn.addEventListener('click', async () => {
             convertBtn.disabled = false;
         }, 500);
     } catch (err) {
-        showError('Ошибка при конвертации: ' + err.message);
+        showError('Conversion error: ' + err.message);
         progress.classList.remove('active');
         convertBtn.disabled = false;
     }
@@ -181,17 +181,17 @@ async function convertImage(file, targetMimeType) {
                         if (blob) {
                             resolve(blob);
                         } else {
-                            reject(new Error('Не удалось создать изображение'));
+                            reject(new Error('Failed to create image'));
                         }
                     },
                     targetMimeType,
                     0.9
                 );
             };
-            img.onerror = () => reject(new Error('Ошибка загрузки изображения'));
+            img.onerror = () => reject(new Error('Error loading image'));
             img.src = e.target.result;
         };
-        reader.onerror = () => reject(new Error('Ошибка чтения файла'));
+        reader.onerror = () => reject(new Error('Error reading file'));
         reader.readAsDataURL(file);
     });
 }
@@ -204,13 +204,13 @@ async function convertText(file, targetMimeType) {
                 let content = e.target.result;
                 let convertedContent = '';
 
-                // Конвертация между форматами
+                // Conversion between formats
                 if (file.type === 'application/json' && targetMimeType === 'application/xml') {
                     convertedContent = jsonToXml(JSON.parse(content));
                 } else if (file.type === 'application/xml' && targetMimeType === 'application/json') {
                     convertedContent = JSON.stringify(xmlToJson(content), null, 2);
                 } else if (file.type === 'text/html' && targetMimeType === 'text/plain') {
-                    // Простое извлечение текста из HTML
+                    // Simple text extraction from HTML
                     const div = document.createElement('div');
                     div.innerHTML = content;
                     convertedContent = div.textContent || div.innerText || '';
@@ -221,10 +221,10 @@ async function convertText(file, targetMimeType) {
                 const blob = new Blob([convertedContent], { type: targetMimeType });
                 resolve(blob);
             } catch (err) {
-                reject(new Error('Ошибка обработки текстового файла: ' + err.message));
+                reject(new Error('Error processing text file: ' + err.message));
             }
         };
-        reader.onerror = () => reject(new Error('Ошибка чтения файла'));
+        reader.onerror = () => reject(new Error('Error reading file'));
         reader.readAsText(file);
     });
 }
