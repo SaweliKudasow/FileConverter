@@ -13,11 +13,22 @@ const error = document.getElementById('error');
 
 let currentFile = null;
 let convertedBlob = null;
+let currentFileType = null; // 'image' | 'text' | 'audio' | 'video' | null
 
 // Supported formats
 const supportedFormats = {
     image: {
-        input: ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp'],
+        // Common image types that browsers can decode
+        input: [
+            'image/jpeg',
+            'image/png',
+            'image/webp',
+            'image/gif',
+            'image/bmp',
+            'image/svg+xml',
+            'image/x-icon',
+            'image/vnd.microsoft.icon'
+        ],
         output: [
             { value: 'image/jpeg', label: 'JPEG' },
             { value: 'image/png', label: 'PNG' },
@@ -25,13 +36,57 @@ const supportedFormats = {
         ]
     },
     text: {
-        input: ['text/plain', 'text/html', 'application/json', 'application/xml', 'text/css', 'text/javascript'],
+        // Explicitly listed text-like types (in addition to generic text/* below)
+        input: [
+            'text/plain',
+            'text/html',
+            'application/json',
+            'application/xml',
+            'text/css',
+            'text/javascript',
+            'application/javascript',
+            'text/markdown',
+            'text/csv'
+        ],
         output: [
             { value: 'text/plain', label: 'TXT' },
             { value: 'text/html', label: 'HTML' },
             { value: 'application/json', label: 'JSON' },
             { value: 'application/xml', label: 'XML' }
         ]
+    },
+    media: {
+        audio: {
+            input: [
+                'audio/mpeg',
+                'audio/mp3',
+                'audio/wav',
+                'audio/x-wav',
+                'audio/ogg',
+                'audio/webm',
+                'audio/aac'
+            ],
+            output: [
+                { value: 'audio/mpeg', label: 'MP3' },
+                { value: 'audio/wav', label: 'WAV' },
+                { value: 'audio/ogg', label: 'OGG' },
+                { value: 'audio/webm', label: 'WEBM' }
+            ]
+        },
+        video: {
+            input: [
+                'video/mp4',
+                'video/webm',
+                'video/ogg',
+                'video/x-msvideo',
+                'video/x-matroska'
+            ],
+            output: [
+                { value: 'video/mp4', label: 'MP4' },
+                { value: 'video/webm', label: 'WEBM' },
+                { value: 'video/ogg', label: 'OGG' }
+            ]
+        }
     }
 };
 
@@ -72,6 +127,7 @@ function handleFile(file) {
 
     // Determine file type
     const fileType = getFileType(file.type);
+    currentFileType = fileType;
 
     if (!fileType) {
         showError('Unsupported file type. Images and text files are supported.');
@@ -80,7 +136,15 @@ function handleFile(file) {
     }
 
     // Populate conversion options
-    const formats = supportedFormats[fileType].output;
+    let formats;
+
+    if (fileType === 'audio') {
+        formats = supportedFormats.media.audio.output;
+    } else if (fileType === 'video') {
+        formats = supportedFormats.media.video.output;
+    } else {
+        formats = supportedFormats[fileType].output;
+    }
     targetFormat.innerHTML = '';
 
     formats.forEach((format) => {
@@ -104,12 +168,40 @@ function handleFile(file) {
 }
 
 function getFileType(mimeType) {
-    if (supportedFormats.image.input.includes(mimeType)) {
+    if (!mimeType) {
+        return null;
+    }
+
+    // Treat any image/* as image if the browser can decode it
+    if (mimeType.startsWith('image/')) {
         return 'image';
     }
-    if (supportedFormats.text.input.includes(mimeType)) {
+
+    if (mimeType.startsWith('audio/')) {
+        return 'audio';
+    }
+
+    if (mimeType.startsWith('video/')) {
+        return 'video';
+    }
+
+    // Generic text types
+    if (mimeType.startsWith('text/')) {
         return 'text';
     }
+
+    // Common text-like application types
+    const textLikeTypes = [
+        'application/json',
+        'application/xml',
+        'application/javascript',
+        'application/x-javascript'
+    ];
+
+    if (textLikeTypes.includes(mimeType)) {
+        return 'text';
+    }
+
     return null;
 }
 
@@ -136,23 +228,46 @@ convertBtn.addEventListener('click', async () => {
 
     try {
         const targetMimeType = targetFormat.value;
-        const fileType = getFileType(currentFile.type);
 
         progressBar.style.width = '60%';
 
-        if (fileType === 'image') {
-            convertedBlob = await convertImage(currentFile, targetMimeType);
-        } else if (fileType === 'text') {
-            convertedBlob = await convertText(currentFile, targetMimeType);
+        // Всегда отправляем файл на бэкенд
+        const formData = new FormData();
+        formData.append('file', currentFile);
+        formData.append('targetMime', targetMimeType);
+        formData.append('originalMime', currentFile.type || '');
+
+        const response = await fetch('/api/convert', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            const data = await response.json().catch(() => null);
+            const message = data && data.error ? data.error : 'Conversion failed';
+            throw new Error(message);
         }
+
+        const blob = await response.blob();
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let filename = currentFile.name;
+        if (contentDisposition) {
+            const match = contentDisposition.match(/filename="?([^"]+)"?/);
+            if (match && match[1]) {
+                filename = match[1];
+            }
+        } else {
+            const extension = getExtensionFromMimeType(targetMimeType);
+            filename = currentFile.name.replace(/\.[^/.]+$/, '') + '.' + extension;
+        }
+
+        convertedBlob = blob;
 
         progressBar.style.width = '100%';
 
         setTimeout(() => {
-            const extension = getExtensionFromMimeType(targetMimeType);
-            const newFileName = currentFile.name.replace(/\.[^/.]+$/, '') + '.' + extension;
             downloadBtn.href = URL.createObjectURL(convertedBlob);
-            downloadBtn.download = newFileName;
+            downloadBtn.download = filename;
             downloadArea.classList.add('active');
             progress.classList.remove('active');
             convertBtn.disabled = false;
@@ -308,7 +423,24 @@ function getExtensionFromMimeType(mimeType) {
         'text/plain': 'txt',
         'text/html': 'html',
         'application/json': 'json',
-        'application/xml': 'xml'
+        'application/xml': 'xml',
+        'text/css': 'css',
+        'text/javascript': 'js',
+        'application/javascript': 'js',
+        'text/markdown': 'md',
+        'text/csv': 'csv',
+        'audio/mpeg': 'mp3',
+        'audio/mp3': 'mp3',
+        'audio/wav': 'wav',
+        'audio/x-wav': 'wav',
+        'audio/ogg': 'ogg',
+        'audio/webm': 'webm',
+        'audio/aac': 'aac',
+        'video/mp4': 'mp4',
+        'video/webm': 'webm',
+        'video/ogg': 'ogg',
+        'video/x-msvideo': 'avi',
+        'video/x-matroska': 'mkv'
     };
     return extensions[mimeType] || 'bin';
 }
