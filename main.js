@@ -122,7 +122,7 @@ fileInput.addEventListener('change', (e) => {
 function handleFile(file) {
     error.classList.remove('active');
     currentFile = file;
-    fileName.textContent = `File: ${file.name} (${formatFileSize(file.size)})`;
+    fileName.textContent = `Datei: ${file.name} (${formatFileSize(file.size)})`;
     fileInfo.classList.add('active');
 
     // Determine file type
@@ -130,7 +130,7 @@ function handleFile(file) {
     currentFileType = fileType;
 
     if (!fileType) {
-        showError('Unsupported file type. Images and text files are supported.');
+        showError('Nicht unterstützter Dateityp. Unterstützt werden Bild- und Textdateien.');
         conversionOptions.classList.remove('active');
         return;
     }
@@ -158,7 +158,7 @@ function handleFile(file) {
     });
 
     if (targetFormat.options.length === 0) {
-        showError('No conversion formats available for this file.');
+        showError('Für diese Datei sind keine Zielformate verfügbar.');
         conversionOptions.classList.remove('active');
     } else {
         conversionOptions.classList.add('active');
@@ -244,7 +244,7 @@ convertBtn.addEventListener('click', async () => {
 
         if (!response.ok) {
             const data = await response.json().catch(() => null);
-            const message = data && data.error ? data.error : 'Conversion failed';
+            const message = data && data.error ? data.error : 'Konvertierung fehlgeschlagen';
             throw new Error(message);
         }
 
@@ -273,7 +273,7 @@ convertBtn.addEventListener('click', async () => {
             convertBtn.disabled = false;
         }, 500);
     } catch (err) {
-        showError('Conversion error: ' + err.message);
+        showError('Konvertierungsfehler: ' + err.message);
         progress.classList.remove('active');
         convertBtn.disabled = false;
     }
